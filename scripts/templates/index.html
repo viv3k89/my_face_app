@@ -1,0 +1,114 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Face Recognition (Local)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 12px; }
+    video { border: 1px solid #444; width: 640px; height: 480px; background: black; }
+    #overlay { position: absolute; left: 12px; top: 12px; color: lime; font-weight:bold; }
+    #controls { margin-top: 8px; }
+    #nameInput { width: 200px; }
+  </style>
+</head>
+<body>
+  <h2>Local Face Recognition</h2>
+  <div style="position:relative; display:inline-block;">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="hiddenCanvas" width="640" height="480" style="display:none;"></canvas>
+    <div id="overlay"></div>
+  </div>
+
+  <div id="controls">
+    <button id="btnRecognize">Recognize</button>
+    <button id="btnEnroll">Enroll</button>
+    <input id="nameInput" placeholder="Name for enrollment" />
+    <span id="status" style="margin-left:12px;"></span>
+  </div>
+
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("hiddenCanvas");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const status = document.getElementById("status");
+    const nameInput = document.getElementById("nameInput");
+
+    async function startCam() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+      } catch (e) {
+        status.textContent = "Camera access denied or unavailable.";
+        console.error(e);
+      }
+    }
+
+    function captureFrame() {
+      // scale video to canvas size
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.8);
+    }
+
+    async function postJson(url, payload) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      return res.json();
+    }
+
+    document.getElementById("btnRecognize").addEventListener("click", async () => {
+      status.textContent = "Recognizing...";
+      overlay.textContent = "";
+      const image = captureFrame();
+      try {
+        const r = await postJson("/recognize", { image });
+        if (r.result === "match") {
+          overlay.textContent = r.name + " (" + (r.distance||0).toFixed(3) + ")";
+          status.textContent = "Matched";
+        } else if (r.result === "unknown") {
+          overlay.textContent = "Unknown (d=" + (r.distance? r.distance.toFixed(3): "n/a") + ")";
+          status.textContent = "No match";
+        } else if (r.result === "no_face") {
+          overlay.textContent = "No face detected";
+          status.textContent = "No face";
+        } else {
+          overlay.textContent = "Error";
+          status.textContent = JSON.stringify(r);
+        }
+      } catch (e) {
+        status.textContent = "Error contacting server";
+        console.error(e);
+      }
+    });
+
+    document.getElementById("btnEnroll").addEventListener("click", async () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        alert("Enter a name to enroll.");
+        return;
+      }
+      status.textContent = "Enrolling...";
+      const image = captureFrame();
+      try {
+        const r = await postJson("/enroll", { image, name });
+        if (r.result === "enrolled") {
+          overlay.textContent = r.name;
+          status.textContent = "Enrolled: " + r.name;
+          nameInput.value = "";
+        } else {
+          status.textContent = "Enroll failed: " + JSON.stringify(r);
+        }
+      } catch (e) {
+        status.textContent = "Error contacting server";
+        console.error(e);
+      }
+    });
+
+    startCam();
+  </script>
+</body>
+</html>

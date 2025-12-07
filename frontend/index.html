@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>FaceTrack — Real-Time Face Recognition Attendance System</title>
+    <style>
+        /* ============= Reset & Base ============= */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f8f9fa;
+            color: #111;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        :root {
+            --primary: #0055ff;
+            --primary-dark: #0041cc;
+            --secondary: #00d084;
+            --neutral-50: #f8f9fa;
+            --neutral-100: #f1f3f5;
+            --neutral-200: #e9ecef;
+            --neutral-600: #495057;
+            --neutral-800: #212529;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, .08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, .12);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, .16);
+        }
+
+        /* ============= Header / Nav ============= */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(248, 249, 250, .95);
+            backdrop-filter: blur(8px);
+            box-shadow: var(--shadow-sm);
+            z-index: 1000;
+        }
+
+        nav {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            gap: .5rem;
+            align-items: center;
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--neutral-800);
+            font-weight: 500;
+            transition: color .2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .nav-cta {
+            background: var(--primary);
+            color: white;
+            border-radius: 50px;
+            padding: .6rem 1rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* ============= Hero ============= */
+        .hero {
+            margin-top: 80px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3.5rem 1.25rem;
+            background: linear-gradient(135deg, #f8f9fa 0, #fff 55%, #e6f0ff 100%);
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-size: 3rem;
+            line-height: 1.05;
+            margin-bottom: .75rem;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-text p {
+            color: #556;
+            margin-bottom: 1.25rem;
+            font-size: 1.05rem;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* hero mock webcam */
+        .webcam-card {
+            background: white;
+            border-radius: 14px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow-md);
+            transition: transform .25s ease, box-shadow .25s ease;
+            perspective: 900px;
+        }
+
+        .webcam-preview {
+            border-radius: 10px;
+            height: 300px;
+            background: linear-gradient(135deg, #e9ecef, #f1f3f5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .parallax-layer {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            transition: transform .26s cubic-bezier(.2, .9, .2, 1);
+            will-change: transform;
+            padding: 1rem;
+        }
+
+        .webcam-status {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .webcam-text {
+            color: var(--neutral-600);
+            font-weight: 600;
+        }
+
+        .webcam-buttons {
+            display: flex;
+            gap: .5rem;
+            margin-top: .75rem;
+        }
+
+        .webcam-buttons button {
+            padding: .6rem .6rem;
+            border-radius: 8px;
+            border: none;
+            background: var(--neutral-100);
+            cursor: pointer;
+            transition: all .18s;
+        }
+
+        .webcam-buttons button:hover {
+            transform: translateY(-3px);
+            background: var(--primary);
+            color: white;
+        }
+
+        /* ============= Features (new split layout) ============= */
+        .features {
+            padding: 3.5rem 1.25rem;
+            background: white;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 2.25rem;
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            margin-bottom: .5rem;
+        }
+
+        .section-header p {
+            color: var(--neutral-600);
+        }
+
+        .features-grid {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: 1fr;
+        }
+
+        .feature-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--neutral-50);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            transform: translateY(8px);
+        }
+
+        .feature-img {
+            flex: 0 0 42%;
+            max-width: 42%;
+        }
+
+        .feature-img svg {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            display: block;
+            transform: translateX(-40px);
+            opacity: 0;
+            transition: transform .7s cubic-bezier(.2, .9, .2, 1), opacity .7s ease;
+        }
+
+        .feature-content {
+            flex: 1 1 58%;
+            padding: 0 .5rem;
+            transform: translateX(40px);
+            opacity: 0;
+            transition: transform .7s cubic-bezier(.2, .9, .2, 1), opacity .7s ease;
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            margin-bottom: .6rem;
+            font-size: 1.2rem;
+        }
+
+        /* reveal state - image left->in, content right->in */
+        .feature-card.show .feature-img svg {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .feature-card.show .feature-content {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        /* stacking on mobile */
+        @media (max-width: 820px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: 1.25rem;
+            }
+
+            .feature-card {
+                flex-direction: column;
+                text-align: left;
+            }
+
+            .feature-img,
+            .feature-content {
+                max-width: 100%;
+                flex: 1 1 100%;
+            }
+
+            .feature-img svg {
+                transform: none;
+                opacity: 1;
+                transition: none;
+            }
+
+            .feature-content {
+                transform: none;
+                opacity: 1;
+            }
+        }
+
+        /* ============= How it works ============= */
+        .how-it-works {
+            padding: 3.5rem 1.25rem;
+            background: linear-gradient(135deg, #e6f0ff 0, #fff 100%);
+        }
+
+        .steps-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+            padding: 110px 0 90px;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            align-items: center;
+            position: relative;
+        }
+
+        .arrow-connector {
+            position: absolute;
+            left: 3%;
+            right: 3%;
+            top: 50%;
+            height: 4px;
+            transform: translateY(-50%);
+            background: var(--neutral-200);
+            border-radius: 2px;
+            z-index: 1;
+        }
+
+        .arrow-progress {
+            position: absolute;
+            left: 3%;
+            top: 50%;
+            height: 4px;
+            transform: translateY(-50%);
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+            z-index: 2;
+            transition: width .18s ease;
+        }
+
+        .arrow-head {
+            position: absolute;
+            top: 50%;
+            right: 3%;
+            width: 12px;
+            height: 12px;
+            transform: translateY(-50%) rotate(45deg);
+            background: transparent;
+            opacity: 0;
+            z-index: 3;
+            transition: opacity .18s ease;
+        }
+
+        .arrow-head.show {
+            opacity: 1;
+            background: var(--secondary);
+            transform: translateY(-50%) rotate(45deg);
+        }
+
+        .step-card {
+            position: relative;
+            z-index: 5;
+            width: 90%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: var(--shadow-md);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: transform .6s cubic-bezier(.2, .9, .2, 1), opacity .6s ease;
+        }
+
+        /* default placement classes */
+        .step-top {
+            /* will be pulled above bar when visible */
+        }
+
+        .step-bottom {
+            /* will be pulled below bar when visible */
+        }
+
+        /* visible variants: floats above / below the progress bar */
+        .step-card.visible.step-top {
+            transform: translateY(-140px);
+            opacity: 1;
+        }
+
+        .step-card.visible.step-bottom {
+            transform: translateY(140px);
+            opacity: 1;
+        }
+
+        @media (max-width:820px) {
+            .steps-wrapper {
+                padding: 40px 0;
+            }
+
+            .steps-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .arrow-connector,
+            .arrow-progress,
+            .arrow-head {
+                display: none;
+            }
+
+            .step-card {
+                transform: none !important;
+                opacity: 1 !important;
+                width: 100%;
+            }
+        }
+
+        /* ============= Visual Demo ============= */
+        .visual-demo {
+            padding: 3.5rem 1.25rem;
+            background: white;
+        }
+
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .demo-box {
+            background: linear-gradient(135deg, #e9ecef, #f1f3f5);
+            border-radius: 14px;
+            padding: 2.25rem;
+            min-height: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+
+        .demo-box:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .demo-visual {
+            font-size: 3.6rem;
+            margin: .75rem 0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1
+            }
+
+            50% {
+                transform: scale(1.06);
+                opacity: .9
+            }
+        }
+
+        /* ============= Footer ============= */
+        footer {
+            background: var(--neutral-800);
+            color: white;
+            padding: 2.5rem 1.25rem;
+        }
+
+        .footer-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        /* ============= Utilities ============= */
+        .sr-only {
+            position: absolute !important;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .parallax-layer,
+            .demo-visual,
+            .feature-img svg,
+            .feature-content,
+            .step-card {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <nav>
+            <div class="logo">
+                <div class="logo-icon">👁</div>
+                <div>FaceTrack</div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="#demo">Demo</a></li>
+                <li><button class="nav-cta" onclick="alert('Get started')">Get Started</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero" aria-label="Hero">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>FaceTrack — <span class="highlight">Real-Time Face Recognition</span></h1>
+                <p>Advanced AI-powered attendance tracking that recognizes known faces, skips sideways faces, and makes
+                    enrollment effortless.</p>
+                <div class="hero-buttons">
+                    <button class="nav-cta" onclick="alert('Start trial')">Start Free Trial</button>
+                    <button
+                        style="border-radius:50px;padding:.6rem 1rem;border:1px solid var(--primary);background:white;color:var(--primary)"
+                        onclick="document.querySelector('#features').scrollIntoView({behavior:'smooth'})">See
+                        Features</button>
+                </div>
+            </div>
+
+            <div class="webcam-card" id="webcamCard" aria-label="Webcam preview">
+                <div class="webcam-preview" id="webcamPreview">
+                    <div class="parallax-layer">
+                        <div class="webcam-status" id="webcamStatus">👤</div>
+                        <div class="webcam-text">Face Detection Active</div>
+                    </div>
+                </div>
+                <div style="margin-top:.8rem">
+                    <span class="status-badge badge-recognized" id="webcamBadge">Status: Ready</span>
+                </div>
+                <div class="webcam-buttons" role="group" aria-label="Webcam states">
+                    <button onclick="changeWebcamState('recognized')">Show Recognized</button>
+                    <button onclick="changeWebcamState('unknown')">Show Unknown</button>
+                    <button onclick="changeWebcamState('sideways')">Show Sideways</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features" aria-label="Features">
+        <div class="section-header">
+            <h2>Powerful Features</h2>
+            <p>Everything you need for accurate & private attendance tracking</p>
+        </div>
+
+        <div class="features-grid" id="featuresGrid">
+            <!-- Feature 1 -->
+            <div class="feature-card scroll-animate" data-animate-delay="0.1s">
+                <div class="feature-img">
+                    <!-- Inline SVG placeholder (replace with <img src="..." /> if you have real images) -->
+                    <svg viewBox="0 0 600 360" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"
+                        role="img" aria-label="Instant Recognition image">
+                        <rect width="100%" height="100%" fill="#e6f0ff" />
+                        <g transform="translate(40,40)">
+                            <rect width="220" height="120" rx="12" fill="#dfeeff" />
+                            <text x="10" y="70" font-size="28" fill="#0055ff" font-family="Arial">Face</text>
+                        </g>
+                    </svg>
+                </div>
+                <div class="feature-content">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Instant Recognition</h3>
+                    <p>Recognize familiar faces in milliseconds with our optimized detection pipeline and local-first
+                        processing.</p>
+                </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="feature-card scroll-animate" data-animate-delay="0.2s">
+                <div class="feature-img">
+                    <svg viewBox="0 0 600 360" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"
+                        role="img" aria-label="Auto Database Storage image">
+                        <rect width="100%" height="100%" fill="#fff7e6" />
+                        <g transform="translate(40,40)">
+                            <rect width="220" height="120" rx="12" fill="#fff1d6" />
+                            <text x="10" y="70" font-size="28" fill="#cc7a00" font-family="Arial">Store</text>
+                        </g>
+                    </svg>
+                </div>
+                <div class="feature-content">
+                    <div class="feature-icon">💾</div>
+                    <h3>Auto Database Storage</h3>
+                    <p>Unknown faces can be captured and stored (locally) with metadata for easier future enrollment and
+                        audits.</p>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="feature-card scroll-animate" data-animate-delay="0.3s">
+                <div class="feature-img">
+                    <svg viewBox="0 0 600 360" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"
+                        role="img" aria-label="Secure & Private image">
+                        <rect width="100%" height="100%" fill="#f1f3f5" />
+                        <g transform="translate(40,40)">
+                            <rect width="220" height="120" rx="12" fill="#f2f5f7" />
+                            <text x="10" y="70" font-size="28" fill="#446" font-family="Arial">Secure</text>
+                        </g>
+                    </svg>
+                </div>
+                <div class="feature-content">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Secure & Private</h3>
+                    <p>Local-first processing and encryption keep biometric data private — no frames are uploaded by
+                        default.</p>
+                </div>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="feature-card scroll-animate" data-animate-delay="0.4s">
+                <div class="feature-img">
+                    <svg viewBox="0 0 600 360" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"
+                        role="img" aria-label="Lightning Fast image">
+                        <rect width="100%" height="100%" fill="#f7fff1" />
+                        <g transform="translate(40,40)">
+                            <rect width="220" height="120" rx="12" fill="#eefbe8" />
+                            <text x="10" y="70" font-size="28" fill="#5aa300" font-family="Arial">Fast</text>
+                        </g>
+                    </svg>
+                </div>
+                <div class="feature-content">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Optimized pipelines allow rapid matching at scale so attendance can be processed with minimal
+                        delay.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="how-it-works" id="how-it-works" aria-label="How it works">
+        <div class="section-header">
+            <h2>How It Works</h2>
+            <p>Three simple steps to streamlined attendance</p>
+        </div>
+
+        <div class="steps-wrapper">
+            <div class="arrow-connector" aria-hidden="true"></div>
+            <div class="arrow-progress" aria-hidden="true"></div>
+            <div class="arrow-head" aria-hidden="true"></div>
+
+            <div class="steps-grid">
+                <div class="step-card step-top" data-step="1">
+                    <div class="step-number">1</div>
+                    <h3>Capture Face</h3>
+                    <p>Point the camera — FaceTrack captures a high-quality face image for analysis.</p>
+                </div>
+
+                <div class="step-card step-bottom" data-step="2">
+                    <div class="step-number">2</div>
+                    <h3>Analyze & Match</h3>
+                    <p>FaceTrack analyzes landmarks, applies a frontal-check (skip sideways), and searches the database.
+                    </p>
+                </div>
+
+                <div class="step-card step-top" data-step="3">
+                    <div class="step-number">3</div>
+                    <h3>Record & Store</h3>
+                    <p>Recognized users are marked present; unknown faces can be enrolled for future recognition.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="visual-demo" id="demo" aria-label="Demo">
+        <div class="demo-container">
+            <div class="section-header">
+                <h2>Interactive Demo</h2>
+                <p>Simulate detection states (visual only)</p>
+            </div>
+            <div class="demo-box" id="demoBox" role="button" tabindex="0" onclick="rotateDemo()" aria-pressed="false"
+                aria-label="Interactive demo box">
+                <div id="demoLive" class="sr-only" aria-live="polite"></div>
+                <div class="demo-state" id="demoState">Click to simulate detection...</div>
+                <div class="demo-visual" id="demoVisual">📷</div>
+                <div class="demo-text" id="demoText">Waiting for face...</div>
+            </div>
+
+            <div style="margin-top:1rem; display:flex; gap:.6rem; justify-content:center;">
+                <button class="nav-cta"
+                    style="background:transparent;border:1px solid var(--primary); color:var(--primary);"
+                    onclick="setDemoState('recognized','✅ John Doe','Recognized','recognized')">Recognized</button>
+                <button class="nav-cta" style="background:transparent;border:1px solid #cc7a00;color:#cc7a00"
+                    onclick="setDemoState('unknown','❓ Unknown','New Face','unknown')">Unknown</button>
+                <button class="nav-cta" style="background:transparent;border:1px solid var(--error);color:var(--error)"
+                    onclick="setDemoState('sideways','⚠️ Invalid Angle','Please face camera','sideways')">Sideways</button>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div>
+                <h4 style="color:white;margin-bottom:.5rem">Product</h4>
+                <ul style="list-style:none;color:rgba(255,255,255,.8)">
+                    <li><a href="#" style="color:rgba(255,255,255,.8);text-decoration:none">Features</a></li>
+                    <li><a href="#" style="color:rgba(255,255,255,.8);text-decoration:none">Docs</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="color:white;margin-bottom:.5rem">Company</h4>
+                <ul style="list-style:none;color:rgba(255,255,255,.8)">
+                    <li><a href="#" style="color:rgba(255,255,255,.8);text-decoration:none">About</a></li>
+                </ul>
+            </div>
+        </div>
+        <div style="text-align:center;color:rgba(255,255,255,.7);margin-top:1rem">&copy; 2025 FaceTrack. All rights
+            reserved.</div>
+    </footer>
+
+    <script>
+        /* ================= Intersection Observer for reveals ================= */
+        const ioOptions = { threshold: 0.12, rootMargin: '0px 0px -40px 0px' };
+        const revealObserver = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // mark as show for feature-card, or visible for step-card (we will control steps via progress too)
+                    if (entry.target.classList.contains('feature-card')) {
+                        // small delay support from data attribute
+                        const delay = parseFloat(entry.target.getAttribute('data-animate-delay') || 0);
+                        setTimeout(() => entry.target.classList.add('show'), Math.round(delay * 5000));
+                    } else {
+                        entry.target.classList.add('visible');
+                    }
+                    obs.unobserve(entry.target);
+                }
+            });
+        }, ioOptions);
+
+        // observe feature cards
+        document.querySelectorAll('.feature-card').forEach(el => revealObserver.observe(el));
+        /* Steps will be controlled by progress bar (not just revealObserver) */
+
+        /* ================= rafThrottle helper ================= */
+        function rafThrottle(fn) {
+            let scheduled = false;
+            return function (...args) {
+                if (scheduled) return;
+                scheduled = true;
+                requestAnimationFrame(() => {
+                    fn.apply(this, args);
+                    scheduled = false;
+                });
+            };
+        }
+
+        /* ================= Progress bar + step reveal logic ================= */
+        const stepsWrapper = document.querySelector('.steps-wrapper');
+        const stepsContainer = document.querySelector('.steps-grid');
+        const arrowProgress = document.querySelector('.arrow-progress');
+        const arrowHead = document.querySelector('.arrow-head');
+        const stepCards = Array.from(document.querySelectorAll('.steps-grid .step-card'));
+
+        // thresholds (percent) where each step reveals: adjust as needed
+        const thresholds = [10, 35, 50];
+
+        function updateProgressAndSteps() {
+            if (!stepsWrapper) return;
+            const rect = stepsWrapper.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            const elementTop = rect.top;
+            const elementHeight = rect.height;
+
+            // progress 0..100
+            const progress = Math.max(0, Math.min(100, ((windowHeight - elementTop) / (windowHeight + elementHeight)) * 100));
+            arrowProgress.style.width = progress + '%';
+
+            if (progress > 75) arrowHead.classList.add('show'); else arrowHead.classList.remove('show');
+
+            // reveal steps alternating top/bottom when progress crosses threshold
+            stepCards.forEach((card, idx) => {
+                const thr = thresholds[idx] || (20 + idx * 25);
+                if (progress >= thr) {
+                    card.classList.add('visible');
+                    // alternate position: top for even index, bottom for odd
+                    if (idx % 2 === 0) {
+                        card.classList.remove('step-bottom');
+                        card.classList.add('step-top');
+                    } else {
+                        card.classList.remove('step-top');
+                        card.classList.add('step-bottom');
+                    }
+                } else {
+                    card.classList.remove('visible');
+                }
+            });
+        }
+
+        const throttledProgress = rafThrottle(updateProgressAndSteps);
+        window.addEventListener('scroll', throttledProgress, { passive: true });
+        window.addEventListener('resize', throttledProgress);
+        throttledProgress();
+
+        /* ================= Webcam-state UI (mock) ================= */
+        function changeWebcamState(state) {
+            const status = document.getElementById('webcamStatus');
+            const badge = document.getElementById('webcamBadge');
+            const preview = document.getElementById('webcamPreview');
+
+            status.classList.remove('status-recognized', 'status-unknown', 'status-sideways');
+            badge.classList.remove('badge-recognized', 'badge-unknown', 'badge-sideways');
+
+            // small pulse
+            preview.style.animation = 'pulse .5s linear';
+            setTimeout(() => preview.style.animation = '', 500);
+
+            if (state === 'recognized') {
+                status.textContent = '✅'; badge.textContent = 'Status: Face Recognized'; badge.classList.add('badge-recognized');
+            } else if (state === 'unknown') {
+                status.textContent = '❓'; badge.textContent = 'Status: Unknown Face'; badge.classList.add('badge-unknown');
+            } else if (state === 'sideways') {
+                status.textContent = '⚠️'; badge.textContent = 'Status: Face Angle Invalid'; badge.classList.add('badge-sideways');
+            }
+        }
+
+        /* ================= Demo box state ================= */
+        let currentDemoState = 0;
+        const demoStates = ['waiting', 'recognized', 'unknown', 'sideways'];
+
+        function rotateDemo() {
+            currentDemoState = (currentDemoState + 1) % demoStates.length;
+            const state = demoStates[currentDemoState];
+            if (state === 'waiting') setDemoState('waiting', 'Click to simulate detection...', 'Waiting for face...', 'waiting');
+            if (state === 'recognized') setDemoState('recognized', '✅ John Doe', 'Recognized', 'recognized');
+            if (state === 'unknown') setDemoState('unknown', '❓ Unknown', 'New Face Detected', 'unknown');
+            if (state === 'sideways') setDemoState('sideways', '⚠️ Invalid Angle', 'Please face camera', 'sideways');
+        }
+
+        function setDemoState(state, stateText, mainText, colorClass) {
+            const demoState = document.getElementById('demoState');
+            const demoVisual = document.getElementById('demoVisual');
+            const demoText = document.getElementById('demoText');
+            const demoBox = document.getElementById('demoBox');
+            const demoLive = document.getElementById('demoLive');
+
+            demoState.textContent = stateText;
+            demoText.textContent = mainText;
+
+            if (state === 'recognized') {
+                demoVisual.textContent = '✅';
+                demoBox.style.background = 'linear-gradient(135deg, rgba(0,208,132,0.08), rgba(0,208,132,0.03))';
+            } else if (state === 'unknown') {
+                demoVisual.textContent = '❓';
+                demoBox.style.background = 'linear-gradient(135deg, rgba(255,165,0,0.08), rgba(255,165,0,0.03))';
+            } else if (state === 'sideways') {
+                demoVisual.textContent = '⚠️';
+                demoBox.style.background = 'linear-gradient(135deg, rgba(255,71,87,0.08), rgba(255,71,87,0.03))';
+            } else {
+                demoVisual.textContent = '📷';
+                demoBox.style.background = 'linear-gradient(135deg,#e9ecef,#f1f3f5)';
+            }
+
+            // announce
+            if (demoLive) {
+                const ann = (state === 'recognized') ? `${mainText} ${stateText}` :
+                    (state === 'unknown') ? `${mainText} ${stateText}` :
+                        (state === 'sideways') ? `${mainText}` : mainText;
+                demoLive.textContent = ann;
+            }
+        }
+
+        /* ================= Parallax tilt for webcam-card ================= */
+        (function () {
+            const card = document.getElementById('webcamCard');
+            const preview = document.getElementById('webcamPreview');
+            if (!card || !preview) return;
+
+            // ensure parallax-layer exists (it already does in markup)
+            const layer = preview.querySelector('.parallax-layer');
+
+            const onMove = rafThrottle((e) => {
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                const rect = card.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                const dx = e.clientX - cx;
+                const dy = e.clientY - cy;
+                const rx = (dy / rect.height) * -6;
+                const ry = (dx / rect.width) * 6;
+                const tx = (dx / rect.width) * -8;
+                const ty = (dy / rect.height) * -8;
+                layer.style.transform = `translate3d(${tx}px, ${ty}px, 6px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+                card.style.transform = `rotateX(${rx * 0.25}deg) rotateY(${ry * 0.25}deg)`;
+            });
+            card.addEventListener('mousemove', onMove);
+            card.addEventListener('mouseleave', () => { layer.style.transform = ''; card.style.transform = ''; });
+        })();
+
+        /* ================= make demo box keyboard accessible ================= */
+        const demoBoxEl = document.getElementById('demoBox');
+        if (demoBoxEl) {
+            demoBoxEl.addEventListener('keydown', ev => {
+                if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); rotateDemo(); }
+            });
+        }
+
+        /* ================= Smooth nav links ================= */
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                const href = a.getAttribute('href');
+                if (href && href.startsWith('#')) {
+                    e.preventDefault();
+                    const t = document.querySelector(href);
+                    if (t) t.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        /* Initial demo state */
+        setDemoState('waiting', 'Click to simulate detection...', 'Waiting for face...', 'waiting');
+
+    </script>
+</body>
+
+</html>
