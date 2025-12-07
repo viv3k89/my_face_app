@@ -12,3 +12,5 @@ scripts/known_faces_images/
 # Ignore large model files
 *.npz
 *.pkl
+# Ignore dlib library
+dlib-20.0.0/
