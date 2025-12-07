@@ -1,0 +1,14 @@
+# Ignore Python virtual environment
+.venv/
+venv/
+
+# Common Python ignores
+__pycache__/
+*.pyc
+
+# Ignore known_faces images
+scripts/known_faces_images/
+
+# Ignore large model files
+*.npz
+*.pkl
